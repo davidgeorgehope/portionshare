@@ -8,6 +8,11 @@ let package = Package(
         .executableTarget(
             name: "PortionShare",
             path: "Sources/PortionShare"
-        )
+        ),
+        .testTarget(
+            name: "PortionShareTests",
+            dependencies: ["PortionShare"],
+            path: "Tests/PortionShareTests"
+        ),
     ]
 )

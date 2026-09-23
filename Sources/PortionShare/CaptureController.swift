@@ -15,8 +15,10 @@ final class CaptureController: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     func start(display: SCDisplay, rectInDisplay: CGRect, scale: CGFloat,
-               excluding windows: [SCWindow]) async throws {
-        let filter = SCContentFilter(display: display, excludingWindows: windows)
+               excluding app: SCRunningApplication?) async throws {
+        let filter = app.map {
+            SCContentFilter(display: display, excludingApplications: [$0], exceptingWindows: [])
+        } ?? SCContentFilter(display: display, excludingWindows: [])
 
         let config = SCStreamConfiguration()
         config.sourceRect = rectInDisplay

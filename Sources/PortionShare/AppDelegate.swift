@@ -42,8 +42,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         Task { @MainActor in
             do {
+                // Before the first share none of our windows are on screen, and
+                // an app with no listed windows is missing from `applications`.
                 let content = try await SCShareableContent.excludingDesktopWindows(
-                    true, onScreenWindowsOnly: true)
+                    true, onScreenWindowsOnly: false)
 
                 let center = CGPoint(x: cgRect.midX, y: cgRect.midY)
                 guard let display = content.displays.first(where: {
@@ -53,16 +55,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 }
 
                 let displayBounds = CGDisplayBounds(display.displayID)
-                let rectInDisplay = cgRect
-                    .intersection(displayBounds)
-                    .offsetBy(dx: -displayBounds.origin.x, dy: -displayBounds.origin.y)
+                let scale = backingScale(for: display)
+                let rectInDisplay = Coordinates.pixelAligned(
+                    cgRect
+                        .intersection(displayBounds)
+                        .offsetBy(dx: -displayBounds.origin.x, dy: -displayBounds.origin.y),
+                    scale: scale)
+                let region = rectInDisplay.offsetBy(dx: displayBounds.origin.x,
+                                                    dy: displayBounds.origin.y)
 
-                // Exclude our own windows (mirror + region border) so the
-                // stream never captures itself.
+                // Exclude this whole app rather than its current windows, so the
+                // mirror and border stay out of the stream even though they open
+                // after the filter is built.
                 let ownPID = ProcessInfo.processInfo.processIdentifier
-                let ownWindows = content.windows.filter {
-                    $0.owningApplication?.processID == ownPID
-                }
+                let ownApp = content.applications.first { $0.processID == ownPID }
 
                 let controller = CaptureController()
                 controller.onStopped = { [weak self] error in
@@ -70,11 +76,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 }
                 try await controller.start(display: display,
                                            rectInDisplay: rectInDisplay,
-                                           scale: backingScale(for: display),
-                                           excluding: ownWindows)
+                                           scale: scale,
+                                           excluding: ownApp)
                 capture = controller
-                mirror?.present(layer: controller.displayLayer, contentSize: rectInDisplay.size)
-                border = BorderWindow(around: cgRect)
+                mirror?.present(layer: controller.displayLayer,
+                                pixelSize: CGSize(width: rectInDisplay.width * scale,
+                                                  height: rectInDisplay.height * scale),
+                                avoiding: Coordinates.nsRect(fromGlobalCG: region))
+                border = BorderWindow(around: region)
                 NSApp.activate(ignoringOtherApps: true)
             } catch {
                 presentFailure(error)

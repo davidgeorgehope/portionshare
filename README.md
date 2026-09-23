@@ -12,7 +12,8 @@ Everything outside the region stays private.
 ## Features
 
 - **Drag to select** any region on any display
-- **Live mirror window** to share in Zoom (native Retina resolution, 30 fps, cursor included)
+- **Live mirror window** to share at full resolution: one window pixel per
+  captured pixel (Retina included), 30 fps, cursor included
 - **Orange outline** on screen shows exactly what viewers can see
 - **Self-exclusion** — the mirror window and outline are filtered out of the
   capture, so there's no hall-of-mirrors even if they overlap your selection
@@ -39,12 +40,19 @@ On first launch, macOS will ask for **Screen Recording** permission. Grant it
 in System Settings → Privacy & Security → Screen Recording, then reopen the
 app.
 
+`build.sh` signs with `SIGN_IDENTITY`, or else your keychain's first
+code-signing identity, so the permission survives rebuilds. With no identity
+it signs ad-hoc, and macOS asks again after every rebuild. If the permission
+gets stuck, `tccutil reset All local.portionshare` clears it.
+
 ## Usage
 
 1. Launch PortionShare. The screen dims — drag to select the region you want
    to share (Esc cancels).
 2. A mirror window opens with a live view of that region, and an orange
-   outline marks the captured area on screen.
+   outline marks the captured area on screen. If you have another display,
+   the mirror always opens there, off the screen you're presenting from. It
+   doesn't need to be visible to you, so even a display you never look at works.
 3. In Zoom: **Share Screen → select the "PortionShare" window → Share.**
 4. Work normally inside the outlined region. Viewers only ever see that area.
 
@@ -63,6 +71,16 @@ display rectangle (`SCStreamConfiguration.sourceRect`) into an
 share. The capture filter excludes PortionShare's own windows, which is why
 the mirror and the outline never appear in the stream.
 
+Meeting apps and browsers share the window's pixels, so the mirror is sized to
+exactly the capture's pixel count on whatever display it's on (half the points
+on a Retina display, the same points on a 1x one) and isn't resizable. A
+smaller window would silently downscale what viewers see. If it doesn't fit on
+the other display, it hangs off the edge facing away from your region, which
+window capture still includes (checked with Chrome's screen sharing). The
+selection is also
+snapped to the display's pixel grid, because ScreenCaptureKit resamples every
+frame of a `sourceRect` that isn't pixel-aligned.
+
 Source layout:
 
 | File | Purpose |
@@ -72,6 +90,15 @@ Source layout:
 | `MirrorWindow.swift` | The live mirror window you share |
 | `BorderWindow.swift` | Click-through outline around the captured region |
 | `AppDelegate.swift` | Wires selection → capture → mirror together |
+
+## Development
+
+```bash
+./test.sh
+```
+
+`test.sh` wraps `swift test` and adds the Swift Testing search paths SwiftPM
+misses when only the Command Line Tools are installed.
 
 ## FAQ
 
