@@ -7,9 +7,12 @@ swift build -c release
 
 APP="dist/PortionShare.app"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/PortionShare "$APP/Contents/MacOS/PortionShare"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+if [[ -f Resources/AppIcon.icns ]]; then
+  cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+fi
 
 # Ad-hoc signature keeps the Screen Recording permission grant stable
 # across rebuilds.

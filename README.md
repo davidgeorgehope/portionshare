@@ -32,6 +32,9 @@ cd portionshare
 open dist/PortionShare.app
 ```
 
+App icon lives in `Resources/AppIcon.icns` (Grok Imagine). Regenerate with
+`./generate_icon.sh` then `./build.sh`.
+
 On first launch, macOS will ask for **Screen Recording** permission. Grant it
 in System Settings → Privacy & Security → Screen Recording, then reopen the
 app.
